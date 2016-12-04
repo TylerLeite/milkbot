@@ -10,6 +10,8 @@
 #define PLAYER1 0
 #define PLAYER2 1
 
+#define APOCALYPSE -1
+
 // Cardinal directions
 #define NODIR -1 // no direction
 #define WEST 0
@@ -79,12 +81,15 @@ class Trail {
     Trail(Trail* other);
 
     void set(int owner, int tick, int type);
+    void apocalify();
 
     int p1Tick, p1Type;
     bool p1Exist;
 
     int p2Tick, p2Type;
     bool p2Exist;
+
+    bool apocalypse;
 };
 
 class Bomb {
@@ -136,7 +141,7 @@ class Game {
 
     void trailResolveSquare(int x, int y);
     void placeTrail(Player* owner, int x, int y, int type);
-    void recursiveDetonate(int x, int y, int direction, int range, int pierce, bool pierceMode);
+    void recursiveDetonate(Player* owner, int x, int y, int direction, int range, int pierce, bool pierceMode);
     void detonate(int x, int y);
 
     void deletePortal(int x, int y, int direction);
@@ -159,9 +164,12 @@ class Game {
 
     int boardSize;
     bool running, p1First; // Whether player1 goes first this turn
+    int moveNumber;
     int winner, mePlayer, lastPlayer; // 0 for player1, 1 for player2;
     std::string lastMove; // Here we have the move that was last made. Or something.
     Player *player1, *player2; // Player class also has person id
+
+    Coord apocalypseIterator1, apocalypseIterator2;
 
     Player *currentPlayer;
     std::map<int, Bomb*> bombMap;

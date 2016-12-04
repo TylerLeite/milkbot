@@ -170,8 +170,10 @@ void AI::onePlayerGame() {
   while (this->realGame->running) {
     std::string pagmove = "";
 
+    int p = rand() % 2;
+
     std::cout << "Player" << this->realGame->currentPlayer->playerNum + 1 << " to move." << std::endl;
-    if (this->realGame->currentPlayer->playerNum == 1) {
+    if (this->realGame->currentPlayer->playerNum == p) {
       std::cout << "Human Player, enter a move: " << std::endl;
       std::cin >> pagmove;
     } else {
@@ -187,11 +189,12 @@ void AI::onePlayerGame() {
 
 void AI::duckGame() {
   this->verbose = true;
+  int p = rand() % 2;
   while (this->realGame->running) {
     std::string pagmove = "";
 
     std::cout << "Player" << this->realGame->currentPlayer->playerNum + 1 << " to move." << std::endl;
-    if (this->realGame->currentPlayer->playerNum == 0) {
+    if (this->realGame->currentPlayer->playerNum == p) {
       pagmove = "b";
       std::vector<std::string> am = this->realGame->filterPointlessMoves();
       while (pagmove == "b") {
@@ -254,20 +257,22 @@ void AI::machineLearn() {
   for (size_t g = 0; g < GENERATIONS; g++) {
     std::cout << "Starting generation " << g+1 << std::endl;
     // run each individual for some number of games
-    int creatnum = 0;
+    int creatNum = 0;
     for (auto creatureIt = population.begin(); creatureIt != population.end(); ) {
       bool dunzo = false; // whether this creature gets the boot
       Creature* curCreat = *creatureIt;
-      std::cout << "Starting creature #" << ++creatNum << "(age: " << curCreat->age() << ")" << "..." << std::endl;
+      std::cout << std::endl << "Starting creature #" << ++creatNum << " (age: " << curCreat->age() << ")" << "..." << std::endl;
+      for (size_t k = 0; k < curCreat->weights.size(); k++) {
+        std::cout << curCreat->weights[k] << ", ";
+      }
+      std::cout << std::endl;
       this->currentCreature = curCreat;
 
+      bool ranOutOfTime = false;
       for (size_t j = 0; j < Y1; j++) {
         if (dunzo) {
           break;
         }
-
-        std::cout << "Year " << j+1 << "..." << std::endl;
-        int timer = 0;
 
         // initialize a dummy creature to play against
         Creature* dummyCreature = new Creature();
@@ -299,13 +304,25 @@ void AI::machineLearn() {
             }
           }
 
-          std::string pagmove = this->chooseMove();
+          std::string pagmove;
+          if (curCreat->playerNum == this->realGame->currentPlayer->playerNum) {
+            pagmove = this->chooseMove();
+          } else {
+            pagmove = "b";
+            std::vector<std::string> am = this->realGame->filterPointlessMoves();
+            while (pagmove == "b") {
+              int r = rand() % am.size();
+              pagmove = am[r];
+            }
+          }
+
           this->realGame->submit(this->realGame->currentPlayer, pagmove);
           sanity -= 1;
         }
 
         if (sanity == 0) {
           sanity = -50;
+          ranOutOfTime = true;
         }
 
         // takin care of bizniss
@@ -325,7 +342,11 @@ void AI::machineLearn() {
         creatureIt = population.erase(creatureIt);
         delete curCreat;
         curCreat = nullptr;
-        std::cout << "Cutoff, there was a loss" << std::endl;
+        if (ranOutOfTime) {
+          std::cout << "Cutoff, game took too long" << std::endl;
+        } else {
+          std::cout << "Cutoff, there was a loss" << std::endl;
+        }
       } else {
         ++creatureIt;
       }
@@ -336,8 +357,8 @@ void AI::machineLearn() {
     // sort creatures by fitness
     std::sort(population.begin(), population.end(), [](Creature* a, Creature* b) {
       // want b < a so larger vals are at the beginning
-      int aval = a->avg() + a->age();
-      int bval = b->avg() + b->age();
+      int aval = a->avg() + std::min(50, a->age());
+      int bval = b->avg() + std::min(50, b->age());
       return bval < aval;
     });
 
@@ -382,7 +403,8 @@ void AI::machineLearn() {
       myfile << std::endl << "-------------------------" << std::endl;
     }
 
-    std::cout << "Finished generation " << g << std::endl;
+    std::cout << "Finished generation " << g+1 << std::endl;
+    std::cout << "-------------------------" << std::endl << std::endl;
   }
 
   std::cout << "Done learning!" << std::endl;
@@ -402,7 +424,6 @@ void AI::serverGame(bool practice) {
 
   while (j["state"].get<std::string>() != "complete") {
     std::string probablyAGoodMove = this->chooseMove();
-
     std::cout << "Found a probably good move: " << probablyAGoodMove << std::endl;
     AI::PostMove(&j, probablyAGoodMove);
     delete this->realGame;
@@ -442,22 +463,28 @@ void AI::initGame(char* arg, bool continuous) {
   this->currentCreature = nullptr;
 
   // heuristic weights, hard-code in previously learned values
-  this->A = 14.0759; // position
-  this->B = 20.3902; // coins
-  this->C = 3.67795; // bomb score
-  this->D = 14.4463; // portal score
-  this->E = 5.69647; // want to spend money
+  /*
+    10.0055, 28.9702, 3.37105, 0.154249, 20.3831,
+    29.2975, 11.6823, 9.64621, 12.9612,
+    17.0621, 6.24294,
+    20.5329, 14.1068,
+  */
+  this->A = 10.0055; // position
+  this->B = 28.9702; // coins
+  this->C = 3.37105; // bomb score
+  this->D = 0.154249; // portal score
+  this->E = 20.3831; // want to spend money
 
-  this->G = 15.3746; // bomb tick multiplier
-  this->H = 1.41593; // max position score
-  this->I = 14.5445; // max bomb tick score
-  this->J = 13.1174; // bombs-out score multiplier
+  this->G = 29.2975; // bomb tick multiplier
+  this->H = 11.6823; // max position score
+  this->I = 9.64621; // max bomb tick score
+  this->J = 12.9612; // bombs-out score multiplier
 
-  this->K = 28.2216; // orange portal score multiplier
-  this->L = 25.7442; // blue portal score multiplier
+  this->K = 17.0621; // orange portal score multiplier
+  this->L = 6.24294; // blue portal score multiplier
 
-  this->N = 10.0017; // bomb x multiplier
-  this->O = 10.2203; // bomb y multiplier
+  this->N = 20.5329; // bomb x multiplier
+  this->O = 14.1068; // bomb y multiplier
 
   // start one of the game modes based on cmd line args
   do {
@@ -526,11 +553,7 @@ int AI::heuristic(Game* node) {
     } else if (node->whoWon() == you->playerNum){
       return -infinity;
     } else {
-      // Problem: draw is infinitely bad for opponent and therefore infinitely good for player
-      //   this is not the case however, so shenanigans need to take place to prevent the bot
-      //   from going for a draw over waiting until a win
-      // TODO: shenanigans
-      return -infinity+1; // one less than infinity
+      return 0;
     }
   }
 
@@ -700,6 +723,11 @@ int AI::minimax(Game* node, int depth, int alpha, int beta) {
   return bestValue;
 }
 
+void AI::doMinimax(int* out, Game* node, int depth) {
+  int infinity = std::numeric_limits<int>::max();
+  *out = this->minimax(node, depth, -infinity, infinity);
+}
+
 std::string AI::chooseMove() {
   std::vector<Game*> children = this->realGame->getChildren();
 
@@ -720,25 +748,36 @@ std::string AI::chooseMove() {
   if (this->learning) {
     if (this->currentCreature->playerNum != this->realGame->currentPlayer->playerNum) {
       depth = OPP_SEARCH_DEPTH;
-      // std::cout << "USING LOWER SEARCH DEPTH!!!" << std::endl; // this is important
+      std::cout << "USING LOWER SEARCH DEPTH!!!" << std::endl; // this is important
     }
   }
 
-  // TODO: might need this
-  // if (children.size() > 4) {
-  //   depth -= 2;
-  // }
+  // Search breadth too large, cut down depth
+  if (children.size() > 5) {
+    depth -= 2;
+  }
 
-  // TODO: multithreading
+  // Each move's analysis gets its own thread
+  std::vector<int*> scores;
+  std::vector<std::thread> threads;
   for (size_t i = 0; i < children.size(); i++) {
-    int score = this->minimax(children[i], depth, -infinity, infinity);
+    int* score = new int(0);
+    scores.push_back(score);
+    threads.push_back(std::thread(&AI::doMinimax, this, score, children[i], depth));
+  }
 
-    if ((score > -1000000) && children[i]->lastMove == "b") {
-      if (this->verbose) {
-        std::cout << "ob: " << score << std::endl;
+  for (size_t i = 0; i < children.size(); i++) {
+    threads[i].join();
+    if (children[i]->lastMove == "b" && *(scores[i]) != -infinity && *(scores[i]) != 0) {
+      std::cout << "ob: " << *(scores[i]) << std::endl;
+      if (rand()%2 == 0) {
+        *(scores[i]) = 1000000;
       }
     }
+  }
 
+  for (size_t i = 0; i < children.size(); i++) {
+    int score = *(scores[i]);
     if (score == max_score) {
       goodMoves.push_back(children[i]->lastMove);
     }

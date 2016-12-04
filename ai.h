@@ -47,6 +47,7 @@ Value formula (min 1, even if the formula returns 0):
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/select.h>
+#include <thread>
 #include <time.h>
 #include <unistd.h>
 #include <vector>
@@ -75,23 +76,23 @@ class Creature {
 #define USERNAME "milk"
 #define URL "http://aicomp.io/api/games/submit/"
 
-#define SEARCH_DEPTH 13
+#define SEARCH_DEPTH 15
 
 // ML constants
 #define MLCT 13 // number of weights
-#define MAX_WEIGHT 100 // maximum weight for a variable
-#define POP_SIZE 500 // population size for each generation
+#define MAX_WEIGHT 30 // maximum weight for a variable
+#define POP_SIZE 100 // population size for each generation
 #define NEW_CHANCE 10 // percent chance that a gene will randomize
-#define MAX_DELTA 5 // maximum change of a gene in one generation
+#define MAX_DELTA 1 // maximum change of a gene in one generation
 
-#define Y1 3 // number of games to simulate in phase 2
+#define Y1 1 // number of games to simulate in phase 2
 #define Y2 5 // number of games to simulate in phase 9
 #define GENERATIONS 1000 // number of generations to run
 
-#define OPP_SEARCH_DEPTH 7 // want the opponent to be able to make a mistake so games don't go forever
+#define OPP_SEARCH_DEPTH 11 // want the opponent to be able to make a mistake so games don't go forever
 
 // sanity cutoffs for simulations
-#define HARDCUTOFF 300 // if game goes this long, end it
+#define HARDCUTOFF 150 // if game goes this long, end it
 #define SOFTCUTOFF HARDCUTOFF-50  // make sure player has coins at this point
 
 class AI {
@@ -112,7 +113,6 @@ class AI {
     void matchmadeServerGame();
     void hostServer();
 
-
     // Minimax functions
     static bool lessComp(const Game* firstElem, const Game* secondElem);
     static bool greatComp(const Game* firstElem, const Game* secondElem);
@@ -122,6 +122,7 @@ class AI {
     int heuristic(Game* node);
     std::string chooseMove();
     int minimax(Game* node, int depth, int alpha, int beta);
+    void doMinimax(int* out, Game* node, int depth);
 
     void initGame(char* arg, bool continuous);
 

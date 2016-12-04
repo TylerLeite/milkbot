@@ -43,7 +43,17 @@ Portal::Portal(Portal* other, Player* newOwner) :
 /* TRAIL CLASS */
 
 Trail::Trail(int owner, int tick, int type) {
-  if (owner == PLAYER1) {
+  if (type == APOCALYPSE) {
+    this->p1Exist = false;
+    this->p1Tick = -1;
+    this->p1Type = NODIR;
+
+    this->p2Exist = false;
+    this->p2Tick = -1;
+    this->p2Type = NODIR;
+
+    this->apocalypse = true;
+  } else if (owner == PLAYER1) {
     this->p1Exist = true;
     this->p1Tick = tick;
     this->p1Type = type;
@@ -51,6 +61,8 @@ Trail::Trail(int owner, int tick, int type) {
     this->p2Exist = false;
     this->p2Tick = -1;
     this->p2Type = NODIR;
+
+    this->apocalypse = false;
   } else {
     this->p2Exist = true;
     this->p2Tick = tick;
@@ -59,12 +71,15 @@ Trail::Trail(int owner, int tick, int type) {
     this->p1Exist = false;
     this->p1Tick = -1;
     this->p1Type = NODIR;
+
+    this->apocalypse = false;
   }
 }
 
 Trail::Trail(Trail* other) :
   p1Exist(other->p1Exist), p1Tick(other->p1Tick), p1Type(other->p1Type),
-  p2Exist(other->p2Exist), p2Tick(other->p2Tick), p2Type(other->p2Type)
+  p2Exist(other->p2Exist), p2Tick(other->p2Tick), p2Type(other->p2Type),
+  apocalypse(other->apocalypse)
 {}
 
 void Trail::set(int owner, int tick, int type) {
@@ -77,6 +92,18 @@ void Trail::set(int owner, int tick, int type) {
     this->p2Tick = tick;
     this->p2Type = type;
   }
+}
+
+void Trail::apocalify() {
+  this->p1Exist = false;
+  this->p1Tick = -1;
+  this->p1Type = NODIR;
+
+  this->p2Exist = false;
+  this->p2Tick = -1;
+  this->p2Type = NODIR;
+
+  this->apocalypse = true;
 }
 
 /* BOMB CLASS */
@@ -202,7 +229,8 @@ int Game::getDirectionOf(std::string clm) {
 Game::Game() :
   boardSize(11), winner(-1), currentTurn(0),
   running(true), p1First(true), mePlayer(0),
-  lastMove("NaM"), lastPlayer(0)
+  lastMove("NaM"), lastPlayer(0), moveNumber(0),
+  apocalypseIterator1(0, 10, NORTH), apocalypseIterator2(10, 0, SOUTH)
 {
   this->player1 = new Player(0);
   this->player2 = new Player(1);
@@ -250,7 +278,7 @@ Game::Game() :
 Game::Game(Game* other) :
   boardSize(other->boardSize), winner(other->winner), currentTurn(other->currentTurn),
   running(other->running), p1First(other->p1First), mePlayer(other->mePlayer),
-  lastMove(other->lastMove), lastPlayer(other->lastPlayer)
+  lastMove(other->lastMove), lastPlayer(other->lastPlayer), moveNumber(other->moveNumber)
 {
   this->player1 = new Player(other->player1);
   this->player2 = new Player(other->player2);
@@ -340,6 +368,7 @@ void Game::loadFromJSON(const json& j) {
   this->mePlayer = j["playerIndex"];
   this->currentTurn = j["moveIterator"];
   this->boardSize = j["boardSize"];
+  this->moveNumber = j["moveNumber"];
 
   int first = j["moveOrder"].at(0);
   this->p1First = (first == 0); // Look how smart I am
@@ -653,6 +682,9 @@ void Game::trailResolveSquare(int x, int y) {
     this->softBlockBoard[i] = 0;
     this->deletePortal(x, y, NODIR); // NODIR means delete all portals
 
+
+    // std::cout << "bv: " << getBlockValue(x, y) << std::endl;
+
     // Give coins to p1
     if (this->trailMap[i]->p1Exist) {
       this->player1->coins += getBlockValue(x, y);
@@ -681,14 +713,23 @@ void Game::placeTrail(Player* owner, int x, int y, int type) {
 
   int i = x*(this->boardSize) + y;
   if (this->trailMap.find(i) == this->trailMap.end()) {
-    Trail* trail = new Trail(ownerNum, 2, type);
+    Trail* trail;
+    if (owner == nullptr || type == APOCALYPSE) {
+      trail = new Trail(-1, 0, APOCALYPSE);
+    } else {
+      trail = new Trail(ownerNum, 2, type);
+    }
     this->trailMap[i] = trail;
   } else {
-    this->trailMap[i]->set(ownerNum, 2, type);
+    if (owner == nullptr || type == APOCALYPSE) {
+      this->trailMap[i]->apocalify();
+    } else {
+      this->trailMap[i]->set(ownerNum, 2, type);
+    }
   }
 }
 
-void Game::recursiveDetonate(int x, int y, int direction, int range, int pierce, bool pierceMode) {
+void Game::recursiveDetonate(Player* owner, int x, int y, int direction, int range, int pierce, bool pierceMode) {
   if (range == 0 || (pierceMode && pierce < 0)) {
     return;
   }
@@ -715,7 +756,7 @@ void Game::recursiveDetonate(int x, int y, int direction, int range, int pierce,
             otherPortal = player->orangePortal;
           }
 
-          this->recursiveDetonate(otherPortal->location.x, otherPortal->location.y, otherPortal->location.dir, range, pierce, pierceMode);
+          this->recursiveDetonate(owner, otherPortal->location.x, otherPortal->location.y, otherPortal->location.dir, range, pierce, pierceMode);
           return;
         }
       }
@@ -727,10 +768,10 @@ void Game::recursiveDetonate(int x, int y, int direction, int range, int pierce,
     type = HORIZONTAL;
   }
 
-  Player* owner = this->player1;
-  if (currentTurn == PLAYER2) {
-    owner = this->player2;
-  }
+  // Player* owner = this->player1;
+  // if (this->currentPlayer->playerNum == PLAYER2) {
+  //   owner = this->player2;
+  // }
 
   // try this
   this->detonate(output.x, output.y);
@@ -753,7 +794,7 @@ void Game::recursiveDetonate(int x, int y, int direction, int range, int pierce,
     pierce -= 1;
   }
 
-  this->recursiveDetonate(output.x, output.y, direction, range-1, pierce, pierceMode);
+  this->recursiveDetonate(owner, output.x, output.y, direction, range-1, pierce, pierceMode);
 }
 
 void Game::detonate(int x, int y) {
@@ -774,7 +815,7 @@ void Game::detonate(int x, int y) {
   this->placeTrail(owner, x, y, ORIGIN);
 
   for (int direction = WEST; direction < SOUTH+1; direction++) {
-    this->recursiveDetonate(x, y, direction, owner->bombRange, owner->bombPierce, false);
+    this->recursiveDetonate(owner, x, y, direction, owner->bombRange, owner->bombPierce, false);
   }
 }
 
@@ -888,6 +929,8 @@ std::string Game::submit(Player* currentPlayer, const std::string& move) {
   this->lastMove = move;
   currentPlayer->lastMove = move;
   this->lastPlayer = this->currentPlayer->playerNum;
+
+  this->moveNumber += 1;
   if (move == "ml") {
     output = this->simulateMovement(currentPlayer->location.x, currentPlayer->location.y, WEST);
     currentPlayer->location.x = output.x;
@@ -989,6 +1032,29 @@ std::string Game::submit(Player* currentPlayer, const std::string& move) {
     // 3. trails are ticked, killing players/blocks etc
     // 4. check if the game's ended
 
+    if (this->moveNumber > 400) {
+      this->placeTrail(nullptr, this->apocalypseIterator1.x, this->apocalypseIterator1.y, APOCALYPSE);
+      this->placeTrail(nullptr, this->apocalypseIterator2.x, this->apocalypseIterator2.y, APOCALYPSE);
+
+      Coord nextSquare1 = this->getNextSquare(this->apocalypseIterator1.x, this->apocalypseIterator1.y, this->apocalypseIterator1.dir);
+      int i = (this->boardSize)*nextSquare1.x + nextSquare1.y;
+      if (nextSquare1.x < 0 || nextSquare1.x >= this->boardSize
+       || nextSquare1.y < 0 || nextSquare1.y >= this->boardSize
+       || ((this->trailMap.find(i) != this->trailMap.end()) && this->trailMap[i]->apocalypse))
+      {
+        // both sides always turn at the same time
+        this->apocalypseIterator1.dir = (this->apocalypseIterator1.dir + 1) % 4;
+        this->apocalypseIterator2.dir = (this->apocalypseIterator2.dir + 1) % 4;
+        nextSquare1 = getNextSquare(this->apocalypseIterator1.x, this->apocalypseIterator1.y, this->apocalypseIterator1.dir);
+      }
+
+      Coord nextSquare2 = getNextSquare(this->apocalypseIterator2.x, this->apocalypseIterator2.y, this->apocalypseIterator2.dir);
+      this->apocalypseIterator1.x = nextSquare1.x;
+      this->apocalypseIterator1.y = nextSquare1.y;
+      this->apocalypseIterator2.x = nextSquare2.x;
+      this->apocalypseIterator2.y = nextSquare2.y;
+    }
+
     std::vector<Coord> toDetonate;
     for (auto it = this->bombMap.begin(); it != this->bombMap.end(); ++it) {
       int i = it->first;
@@ -1029,7 +1095,7 @@ std::string Game::submit(Player* currentPlayer, const std::string& move) {
         }
       }
 
-      if (!trail->p1Exist && !trail->p2Exist) {
+      if (!trail->p1Exist && !trail->p2Exist && !trail->apocalypse) {
         delete trail;
         trail = nullptr;
         it->second = nullptr;
@@ -1070,7 +1136,7 @@ std::vector<std::string> Game::filterPointlessMoves() {
     std::string clm = Game::allMoves[i];
 
     if (clm == "") {
-      if (me->coins >= 5) {
+      if (me->coins >= 5 && this->moveNumber < 400) {
         continue;
       }
     } else if (clm == "buy_block") {
@@ -1078,7 +1144,7 @@ std::vector<std::string> Game::filterPointlessMoves() {
         continue;
       }
 
-      if (this->bombMap.empty()) {
+      if (this->bombMap.empty() && this->moveNumber < 400) {
         // only look at buying a block when bombs are on the field
         continue;
       }
@@ -1092,7 +1158,7 @@ std::vector<std::string> Game::filterPointlessMoves() {
           continue;
         }
       } else if (clm == "buy_range") {
-        if (me->bombRange >= 11 || me->bombPierce < me->bombRange) {
+        if (me->bombRange > me->bombPierce) {
           continue;
         }
       } else if (clm == "buy_count") {
@@ -1108,7 +1174,7 @@ std::vector<std::string> Game::filterPointlessMoves() {
         }
       }
     } else if (clm == "op" || clm == "bp") {
-      if (this->bombMap.empty()) {
+      if (this->bombMap.empty() || this->moveNumber > 400) {
         // only look at portal moves when bombs are on the field
         continue;
       }
@@ -1125,10 +1191,11 @@ std::vector<std::string> Game::filterPointlessMoves() {
     } else if (clm == "mr" || clm == "ml" || clm == "md" || clm == "mu") {
       int dir = Game::getDirectionOf(clm);
 
-      Coord destination = this->getNextSquare(me->location.x, me->location.y, dir);
-      if (this->isOutOfBounds(destination)) {
+      Coord destination = this->simulateMovement(me->location.x, me->location.y, dir);
+      if (this->isOutOfBounds(destination) || (destination.x == me->location.x && destination.y == me->location.y)) {
         continue;
       }
+      
       int contents = this->querySpace(destination.x, destination.y);
       if (contents != SP_AIR) {
         continue;
@@ -1165,16 +1232,36 @@ void Game::render() {
     for (int x = 0; x < 11; x++) {
       int i = x * (this->boardSize) + y;
       if (this->trailMap.find(i) != this->trailMap.end()) {
-        std::cout << 'T';
+        if (this->trailMap.find(i)->second->p2Exist) {
+          std::cout << 't';
+        } else {
+          std::cout << 'T';
+        }
       } else if (this->portalMap.find(i) != this->portalMap.end()) {
         if (this->portalMap[i].find(EAST) != this->portalMap[i].end()) {
-          std::cout << 'E';
+          if (this->portalMap[i][EAST]->owner->playerNum == PLAYER1) {
+            std::cout << 'E';
+          } else {
+            std::cout << 'e';
+          }
         } else if (this->portalMap[i].find(WEST) != this->portalMap[i].end()) {
-          std::cout << 'W';
+          if (this->portalMap[i][WEST]->owner->playerNum == PLAYER1) {
+            std::cout << 'W';
+          } else {
+            std::cout << 'w';
+          }
         } else if (this->portalMap[i].find(NORTH) != this->portalMap[i].end()) {
-          std::cout << 'N';
+          if (this->portalMap[i][NORTH]->owner->playerNum == PLAYER1) {
+            std::cout << 'N';
+          } else {
+            std::cout << 'n';
+          }
         } else if (this->portalMap[i].find(SOUTH) != this->portalMap[i].end()) {
-          std::cout << 'S';
+          if (this->portalMap[i][SOUTH]->owner->playerNum == PLAYER1) {
+            std::cout << 'S';
+          } else {
+            std::cout << 's';
+          }
         }
       } else {
         int t = this->querySpace(x, y);
@@ -1183,4 +1270,6 @@ void Game::render() {
     }
     std::cout << std::endl;
   }
+
+  std::cout << "p1c: " << this->player1->coins << "; p2c: " << this->player2->coins << std::endl;
 }
