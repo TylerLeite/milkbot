@@ -828,7 +828,7 @@ std::string AI::chooseMove() {
     double msTaken = (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000);
     std::cout << "Time: " << msTaken << " ms" << std::endl;
 
-    if (msTaken >= 13500) {
+    if (msTaken >= 14000) {
       std::cout << "TIMEOUT NOOOOO" << std::endl;
       *(int*)0=0; // cause a segfault, my favorite way to exit a progam
     }
