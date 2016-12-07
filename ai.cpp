@@ -167,11 +167,10 @@ void AI::hotseatGame() {
 }
 
 void AI::onePlayerGame() {
+  int p = rand() % 2;
+  this->verbose = true;
   while (this->realGame->running) {
     std::string pagmove = "";
-
-    int p = rand() % 2;
-
     std::cout << "Player" << this->realGame->currentPlayer->playerNum + 1 << " to move." << std::endl;
     if (this->realGame->currentPlayer->playerNum == p) {
       std::cout << "Human Player, enter a move: " << std::endl;
@@ -207,6 +206,10 @@ void AI::duckGame() {
     }
 
     this->realGame->submit(this->realGame->currentPlayer, pagmove);
+    if (this->verbose) {
+      std::cout << "Move: " << this->realGame->moveNumber << std::endl;
+    }
+
     this->realGame->render();
   }
 }
@@ -219,6 +222,7 @@ void AI::cpuVsCpuGame() {
     std::cout << "Player" << this->realGame->currentPlayer->playerNum + 1 << " to move." << std::endl;
 
     pagmove = this->chooseMove();
+    std::cout << "Found a probably good move" << pagmove << std::endl;
 
     this->realGame->submit(this->realGame->currentPlayer, pagmove);
     this->realGame->render();
@@ -754,7 +758,11 @@ std::string AI::chooseMove() {
 
   // Search breadth too large, cut down depth
   if (children.size() > 5) {
-    depth -= 2;
+    depth -= 2; // 13 depth
+  }
+
+  if (children.size() > 7) {
+    depth -= 2; // 11 depth
   }
 
   // Each move's analysis gets its own thread
@@ -800,12 +808,12 @@ std::string AI::chooseMove() {
     return " ";
   }
 
-  std::string inTheCourt[16] = {"b", "buy_count", "buy_range", "buy_pierce", "ml", "mu", "mr", "md", "op", "bp", "", "tr", "tl", "td", "tu", "buy_block"}; // order
+  std::string inTheCourt[16] = {"b", "ml", "mu", "mr", "md", "buy_count", "buy_range", "buy_pierce", "op", "bp", "buy_block", "", "tr", "tl", "td", "tu"}; // order
   if (this->realGame->currentPlayer->playerNum == PLAYER1) {
-    inTheCourt[4] = "mr";
-    inTheCourt[5] = "md";
-    inTheCourt[6] = "ml";
-    inTheCourt[7] = "mu";
+    inTheCourt[1] = "mr";
+    inTheCourt[2] = "md";
+    inTheCourt[3] = "ml";
+    inTheCourt[4] = "mu";
   }
 
   std::string chosenMove = "";

@@ -1149,7 +1149,7 @@ std::vector<std::string> Game::filterPointlessMoves() {
         continue;
       }
     } else if (clm == "buy_range" || clm == "buy_pierce" || clm == "buy_count") {
-      if (me->coins < 5) {
+      if (me->coins < 5 || this->moveNumber > 400) {
         continue;
       }
 
@@ -1158,7 +1158,7 @@ std::vector<std::string> Game::filterPointlessMoves() {
           continue;
         }
       } else if (clm == "buy_range") {
-        if (me->bombRange > me->bombPierce) {
+        if (me->bombRange >= 10 || me->bombRange > me->bombPierce) {
           continue;
         }
       } else if (clm == "buy_count") {
@@ -1174,7 +1174,7 @@ std::vector<std::string> Game::filterPointlessMoves() {
         }
       }
     } else if (clm == "op" || clm == "bp") {
-      if (this->bombMap.empty() || this->moveNumber > 400) {
+      if (this->bombMap.empty() && this->moveNumber < 400) {
         // only look at portal moves when bombs are on the field
         continue;
       }
@@ -1182,6 +1182,7 @@ std::vector<std::string> Game::filterPointlessMoves() {
       if (me->bombCount < 1) {
         continue;
       }
+
       int x = this->currentPlayer->location.x;
       int y = this->currentPlayer->location.y;
       int i = x * (this->boardSize) + y;
@@ -1195,7 +1196,7 @@ std::vector<std::string> Game::filterPointlessMoves() {
       if (this->isOutOfBounds(destination) || (destination.x == me->location.x && destination.y == me->location.y)) {
         continue;
       }
-      
+
       int contents = this->querySpace(destination.x, destination.y);
       if (contents != SP_AIR) {
         continue;
@@ -1271,5 +1272,13 @@ void Game::render() {
     std::cout << std::endl;
   }
 
-  std::cout << "p1c: " << this->player1->coins << "; p2c: " << this->player2->coins << std::endl;
+  std::cout << "p1: c=" << this->player1->coins
+            << "; r=" << this->player1->bombRange
+            << "; p=" << this->player1->bombPierce
+            << "; b=" << this->player1->bombCount << std::endl;
+
+  std::cout << "p2: c=" << this->player2->coins
+            << "; r=" << this->player2->bombRange
+            << "; p=" << this->player2->bombPierce
+            << "; b=" << this->player2->bombCount << std::endl;
 }
