@@ -1140,15 +1140,14 @@ std::vector<std::string> Game::filterPointlessMoves() {
         continue;
       }
     } else if (clm == "buy_block") {
-      if (me->coins < 10) {
-        continue;
-      }
-
-      if (this->bombMap.empty() && this->moveNumber < 400) {
-        // only look at buying a block when bombs are on the field
+      if (this->moveNumber < 400) {
         continue;
       }
     } else if (clm == "buy_range" || clm == "buy_pierce" || clm == "buy_count") {
+      if (this->bombMap.empty()) {
+        continue;
+      }
+
       if (me->coins < 5 || this->moveNumber > 400) {
         continue;
       }
@@ -1158,7 +1157,7 @@ std::vector<std::string> Game::filterPointlessMoves() {
           continue;
         }
       } else if (clm == "buy_range") {
-        if (me->bombRange >= 10 || me->bombRange > me->bombPierce) {
+        if (me->bombRange >= 11 || me->bombRange > me->bombPierce) {
           continue;
         }
       } else if (clm == "buy_count") {
@@ -1174,8 +1173,14 @@ std::vector<std::string> Game::filterPointlessMoves() {
         }
       }
     } else if (clm == "op" || clm == "bp") {
-      if (this->bombMap.empty() && this->moveNumber < 400) {
-        // only look at portal moves when bombs are on the field
+      // only look at portal moves when bombs are on the field
+      if (this->bombMap.empty() || this->moveNumber >= 400) {
+        continue;
+      }
+
+      if (clm == "bp" && me->bluePortal != nullptr) {
+        continue;
+      } else if (clm == "op" && me->orangePortal != nullptr) {
         continue;
       }
     } else if (clm == "b") {

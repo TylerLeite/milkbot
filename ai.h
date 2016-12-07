@@ -76,7 +76,7 @@ class Creature {
 #define USERNAME "milk"
 #define URL "http://aicomp.io/api/games/submit/"
 
-#define SEARCH_DEPTH 15
+#define SEARCH_DEPTH 13
 
 // ML constants
 #define MLCT 13 // number of weights

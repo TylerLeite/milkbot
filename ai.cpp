@@ -222,7 +222,7 @@ void AI::cpuVsCpuGame() {
     std::cout << "Player" << this->realGame->currentPlayer->playerNum + 1 << " to move." << std::endl;
 
     pagmove = this->chooseMove();
-    std::cout << "Found a probably good move" << pagmove << std::endl;
+    std::cout << "Found a probably good move: " << pagmove << std::endl;
 
     this->realGame->submit(this->realGame->currentPlayer, pagmove);
     this->realGame->render();
@@ -468,7 +468,7 @@ void AI::initGame(char* arg, bool continuous) {
 
   // heuristic weights, hard-code in previously learned values
   /*
-    10.0055, 28.9702, 3.37105, 0.154249, 20.3831,
+    10.0055, 28.9702, 3.37105, 0.15425, 20.3831,
     29.2975, 11.6823, 9.64621, 12.9612,
     17.0621, 6.24294,
     20.5329, 14.1068,
@@ -476,7 +476,7 @@ void AI::initGame(char* arg, bool continuous) {
   this->A = 10.0055; // position
   this->B = 28.9702; // coins
   this->C = 3.37105; // bomb score
-  this->D = 0.154249; // portal score
+  this->D = 0.15425; // portal score
   this->E = 20.3831; // want to spend money
 
   this->G = 29.2975; // bomb tick multiplier
@@ -715,7 +715,7 @@ int AI::minimax(Game* node, int depth, int alpha, int beta) {
       beta = std::min(beta, bestValue);
     }
 
-    if (beta <= alpha) {
+    if (beta <= alpha && node->currentTurn >= 0) {
       break; // CUTOFF
     }
   }
@@ -728,11 +728,13 @@ int AI::minimax(Game* node, int depth, int alpha, int beta) {
 }
 
 void AI::doMinimax(int* out, Game* node, int depth) {
+  // For multithreading (not currently used)
   int infinity = std::numeric_limits<int>::max();
   *out = this->minimax(node, depth, -infinity, infinity);
 }
 
 std::string AI::chooseMove() {
+  std::clock_t start = std::clock();
   std::vector<Game*> children = this->realGame->getChildren();
 
   int infinity = std::numeric_limits<int>::max(); // need this for later (now)
@@ -757,35 +759,25 @@ std::string AI::chooseMove() {
   }
 
   // Search breadth too large, cut down depth
-  if (children.size() > 5) {
-    depth -= 2; // 13 depth
-  }
-
-  if (children.size() > 7) {
-    depth -= 2; // 11 depth
+  if (children.size() >= 6) {
+    depth -= 2;
   }
 
   // Each move's analysis gets its own thread
-  std::vector<int*> scores;
-  std::vector<std::thread> threads;
+  std::vector<int> scores;
   for (size_t i = 0; i < children.size(); i++) {
-    int* score = new int(0);
-    scores.push_back(score);
-    threads.push_back(std::thread(&AI::doMinimax, this, score, children[i], depth));
-  }
-
-  for (size_t i = 0; i < children.size(); i++) {
-    threads[i].join();
-    if (children[i]->lastMove == "b" && *(scores[i]) != -infinity && *(scores[i]) != 0) {
-      std::cout << "ob: " << *(scores[i]) << std::endl;
-      if (rand()%2 == 0) {
-        *(scores[i]) = 1000000;
+    int score = this->minimax(children[i], depth, -infinity, infinity);
+    if (children[i]->lastMove == "b" && score != -infinity && score != 0) {
+      if (rand() % 2 >= 0) {
+        score = 1000000;
       }
     }
+
+    scores.push_back(score);
   }
 
   for (size_t i = 0; i < children.size(); i++) {
-    int score = *(scores[i]);
+    int score = scores[i];
     if (score == max_score) {
       goodMoves.push_back(children[i]->lastMove);
     }
@@ -805,7 +797,8 @@ std::string AI::chooseMove() {
     for (size_t i = 0; i < children.size(); i++) {
       delete children[i];
     }
-    return " ";
+
+    return "b";
   }
 
   std::string inTheCourt[16] = {"b", "ml", "mu", "mr", "md", "buy_count", "buy_range", "buy_pierce", "op", "bp", "buy_block", "", "tr", "tl", "td", "tu"}; // order
@@ -828,6 +821,17 @@ std::string AI::chooseMove() {
 
   for (size_t i = 0; i < children.size(); i++) {
     delete children[i];
+  }
+
+  // how long did choosing this move take?
+  if (this->verbose) {
+    double msTaken = (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000);
+    std::cout << "Time: " << msTaken << " ms" << std::endl;
+
+    if (msTaken >= 13500) {
+      std::cout << "TIMEOUT NOOOOO" << std::endl;
+      *(int*)0=0; // cause a segfault, my favorite way to exit a progam
+    }
   }
 
   return chosenMove;
