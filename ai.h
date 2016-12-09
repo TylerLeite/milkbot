@@ -76,9 +76,7 @@ class Creature {
 #define USERNAME "milk"
 #define URL "http://aicomp.io/api/games/submit/"
 
-#define SEARCH_DEPTH 13
-
-// ML constants
+#define SEARCH_DEPTH 17
 #define MLCT 13 // number of weights
 #define MAX_WEIGHT 30 // maximum weight for a variable
 #define POP_SIZE 100 // population size for each generation
@@ -130,7 +128,7 @@ class AI {
     Game* realGame;
 
     bool verbose;
-
+    std::clock_t start;
     // Why not throw in some ML?
     bool learning;
     Creature *p1Creature, *p2Creature, *currentCreature;

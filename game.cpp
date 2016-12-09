@@ -165,22 +165,22 @@ void Player::kill() {
 
 std::vector<std::string> makeAllMoves() {
   std::vector<std::string> allMoves;
-  allMoves.push_back("");
-  allMoves.push_back("buy_count");
-  allMoves.push_back("buy_block");
-  allMoves.push_back("buy_pierce");
-  allMoves.push_back("buy_range");
-  allMoves.push_back("b");
   allMoves.push_back("mu");
   allMoves.push_back("mr");
   allMoves.push_back("ml");
-  allMoves.push_back("md");
+  allMoves.push_back("md"); 
+  allMoves.push_back("b");
+  allMoves.push_back("op");
+  allMoves.push_back("bp");
+  //allMoves.push_back("buy_block");
+  allMoves.push_back("buy_range");
+  allMoves.push_back("buy_pierce");
+  allMoves.push_back("buy_count");
+  allMoves.push_back("");
   //allMoves.push_back("tu");
   //allMoves.push_back("tl");
   //allMoves.push_back("td");
   //allMoves.push_back("tr");
-  allMoves.push_back("op");
-  allMoves.push_back("bp");
   return allMoves;
 }
 
@@ -449,6 +449,8 @@ void Game::loadFromJSON(const json& j) {
     std::string position = portalMapInfo.key();
     int x = position.at(0) - '0';
     int y = position.at(2) - '0';
+    
+    //std::cout << "portal placing, x,y = " << x << ", " << y <<  std::endl;
 
     for (json::const_iterator portalInfo = portalMapInfo.value().begin(); portalInfo != portalMapInfo.value().end(); ++portalInfo) {
       std::string pik = portalInfo.key();
@@ -471,6 +473,8 @@ void Game::loadFromJSON(const json& j) {
       } else {
         owner->bluePortal = portal;
       }
+
+      this->portalMap[x*(this->boardSize)+y][direction] = portal;
     }
   }
 }
@@ -1136,11 +1140,11 @@ std::vector<std::string> Game::filterPointlessMoves() {
     std::string clm = Game::allMoves[i];
 
     if (clm == "") {
-      if (me->coins >= 5 && this->moveNumber < 400) {
+      if (this->moveNumber < 400) {
         continue;
       }
     } else if (clm == "buy_block") {
-      if (this->moveNumber < 400) {
+      if (this->bombMap.empty() && this->moveNumber < 400) {
         continue;
       }
     } else if (clm == "buy_range" || clm == "buy_pierce" || clm == "buy_count") {
@@ -1178,11 +1182,13 @@ std::vector<std::string> Game::filterPointlessMoves() {
         continue;
       }
 
+      /*
       if (clm == "bp" && me->bluePortal != nullptr) {
         continue;
       } else if (clm == "op" && me->orangePortal != nullptr) {
         continue;
       }
+      //*/
     } else if (clm == "b") {
       if (me->bombCount < 1) {
         continue;

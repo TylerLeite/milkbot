@@ -417,6 +417,7 @@ void AI::machineLearn() {
 void AI::serverGame(bool practice) {
   json j;
   if (practice) {
+    this->verbose = true;
     AI::StartPracticeGame(&j);
   } else {
     this->verbose = true;
@@ -693,6 +694,20 @@ int AI::minimax(Game* node, int depth, int alpha, int beta) {
     return this->heuristic(node);
   }
 
+  double msTaken = (std::clock() - this->start) / (double)(CLOCKS_PER_SEC / 1000);
+  if (msTaken > 13500) {
+    // panic, running out of time
+    if (this->verbose) {
+     std::cout << "PANIC!!!" << std::endl;
+    }
+
+    if (maximizingPlayer) {
+      return 1000000;
+    } else {
+      return -1000000;
+    }
+  }
+
   std::vector<Game*> children = node->getChildren();
   qsortGames(children, 0, children.size()-1);
 
@@ -715,9 +730,21 @@ int AI::minimax(Game* node, int depth, int alpha, int beta) {
       beta = std::min(beta, bestValue);
     }
 
-    if (beta <= alpha && node->currentTurn >= 0) {
-      break; // CUTOFF
+    //*
+    if (beta <= alpha && node->currentTurn == 0) {
+      break;
     }
+    //*/
+
+    /*
+    if (beta <= alpha){
+      if (this->realGame->currentPlayer->playerNum == PLAYER1 && node->currentTurn == 0) {
+        break; // CUTOFF
+      } else if (this->realGame->currentPlayer->playerNum == PLAYER2 && node->currentTurn == 1) {
+        break;
+      }
+    }
+    //*/
   }
 
   for (size_t i = 0; i < children.size(); i++) {
@@ -734,7 +761,7 @@ void AI::doMinimax(int* out, Game* node, int depth) {
 }
 
 std::string AI::chooseMove() {
-  std::clock_t start = std::clock();
+  this->start = std::clock();
   std::vector<Game*> children = this->realGame->getChildren();
 
   int infinity = std::numeric_limits<int>::max(); // need this for later (now)
@@ -763,20 +790,39 @@ std::string AI::chooseMove() {
     depth -= 2;
   }
 
-  // Each move's analysis gets its own thread
+  // Each move's analysis doesn't get its own thread
   std::vector<int> scores;
   for (size_t i = 0; i < children.size(); i++) {
+    if (this->verbose) {
+      std::cout << "Trying move: " << children[i]->lastMove << std::endl; 
+    }
     int score = this->minimax(children[i], depth, -infinity, infinity);
     if (children[i]->lastMove == "b" && score != -infinity && score != 0) {
-      if (rand() % 2 >= 0) {
+      if (this->realGame->moveNumber <= 120) {
         score = 1000000;
+      } else if (this->realGame->moveNumber <= 200) {
+        if (rand() % 3 == 0) {
+          score = 1000000;
+        }
+      } else {
+        if (rand() % 2 == 0) {
+          score = 1000000;
+        }
       }
     }
 
     scores.push_back(score);
+    
+    double msTaken = (std::clock() - this->start) / (double)(CLOCKS_PER_SEC / 1000);
+    //std::cout << "Time: " << msTaken << " ms" << std::endl;
+    int nextI = i+1;
+    if (msTaken >= std::min(12000, 14000*(1 - 1/(nextI+1)))) {
+      std::cout << "Cutting the anal(ysis) short" << std::endl;
+      break;
+    }
   }
 
-  for (size_t i = 0; i < children.size(); i++) {
+  for (size_t i = 0; i < scores.size(); i++) {
     int score = scores[i];
     if (score == max_score) {
       goodMoves.push_back(children[i]->lastMove);
@@ -798,7 +844,7 @@ std::string AI::chooseMove() {
       delete children[i];
     }
 
-    return "b";
+    return "tu";
   }
 
   std::string inTheCourt[16] = {"b", "ml", "mu", "mr", "md", "buy_count", "buy_range", "buy_pierce", "op", "bp", "buy_block", "", "tr", "tl", "td", "tu"}; // order
@@ -825,7 +871,7 @@ std::string AI::chooseMove() {
 
   // how long did choosing this move take?
   if (this->verbose) {
-    double msTaken = (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000);
+    double msTaken = (std::clock() - this->start) / (double)(CLOCKS_PER_SEC / 1000);
     std::cout << "Time: " << msTaken << " ms" << std::endl;
 
     if (msTaken >= 14000) {
