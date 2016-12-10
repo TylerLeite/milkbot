@@ -1,5 +1,14 @@
 #include "game.h"
 
+void split(const std::string &s, char delim, std::vector<std::string> &out) {
+  std::stringstream ss;
+  ss.str(s);
+  std::string item;
+  while (std::getline(ss, item, delim)) {
+    out.push_back(item);
+  }
+}
+
 /* COORD CLASS */
 Coord::Coord() :
   x(0), y(0), dir(NODIR)
@@ -170,8 +179,8 @@ std::vector<std::string> makeAllMoves() {
   allMoves.push_back("mr");
   allMoves.push_back("ml");
   allMoves.push_back("md");
-  allMoves.push_back("op");
-  allMoves.push_back("bp");
+  //allMoves.push_back("op");
+  //allMoves.push_back("bp");
   //allMoves.push_back("buy_block");
   allMoves.push_back("buy_range");
   allMoves.push_back("buy_pierce");
@@ -434,11 +443,11 @@ void Game::loadFromJSON(const json& j) {
   // Populate trail map
   for (json::const_iterator trailInfo = j["trailMap"].begin(); trailInfo != j["trailMap"].end(); ++trailInfo) {
     std::string position = trailInfo.key();
-    int x = position.at(0) - '0';
-    int y = position.at(2) - '0';
+    std::vector<std::string> parts;
+    split(position, ',', parts);
+    int x = std::stoi(parts[0]);
+    int y = std::stoi(parts[1]);
 
-    std::cout << trailInfo.key() << std::endl;
-    std::cout << "trail placing, x,y = " << x << ", " << y <<  std::endl;
     this->placeTrail(this->player1, x, y, 'h');
   }
 
@@ -446,10 +455,10 @@ void Game::loadFromJSON(const json& j) {
   // Populate portal map
   for (json::const_iterator portalMapInfo = j["portalMap"].begin(); portalMapInfo != j["portalMap"].end(); ++portalMapInfo) {
     std::string position = portalMapInfo.key();
-    int x = position.at(0) - '0';
-    int y = position.at(2) - '0';
-
-    //std::cout << "portal placing, x,y = " << x << ", " << y <<  std::endl;
+    std::vector<std::string> parts;
+    split(position, ',', parts);
+    int x = std::stoi(parts[0]);
+    int y = std::stoi(parts[1]);
 
     for (json::const_iterator portalInfo = portalMapInfo.value().begin(); portalInfo != portalMapInfo.value().end(); ++portalInfo) {
       std::string pik = portalInfo.key();
@@ -1278,6 +1287,8 @@ void Game::render() {
     }
     std::cout << std::endl;
   }
+
+  std::cout << "mv: " << this->moveNumber << std::endl;
 
   std::cout << "p1: c=" << this->player1->coins
             << "; r=" << this->player1->bombRange
