@@ -169,7 +169,7 @@ std::vector<std::string> makeAllMoves() {
   allMoves.push_back("mu");
   allMoves.push_back("mr");
   allMoves.push_back("ml");
-  allMoves.push_back("md"); 
+  allMoves.push_back("md");
   allMoves.push_back("op");
   allMoves.push_back("bp");
   //allMoves.push_back("buy_block");
@@ -357,9 +357,6 @@ Game::~Game() {
 }
 
 void Game::loadFromJSON(const json& j) {
-
-  //std::cout << j.dump(4) << std::endl;
-
   delete this->player1;
   this->player1 = nullptr;
   delete this->player2;
@@ -440,6 +437,8 @@ void Game::loadFromJSON(const json& j) {
     int x = position.at(0) - '0';
     int y = position.at(2) - '0';
 
+    std::cout << trailInfo.key() << std::endl;
+    std::cout << "trail placing, x,y = " << x << ", " << y <<  std::endl;
     this->placeTrail(this->player1, x, y, 'h');
   }
 
@@ -449,7 +448,7 @@ void Game::loadFromJSON(const json& j) {
     std::string position = portalMapInfo.key();
     int x = position.at(0) - '0';
     int y = position.at(2) - '0';
-    
+
     //std::cout << "portal placing, x,y = " << x << ", " << y <<  std::endl;
 
     for (json::const_iterator portalInfo = portalMapInfo.value().begin(); portalInfo != portalMapInfo.value().end(); ++portalInfo) {
@@ -685,9 +684,6 @@ void Game::trailResolveSquare(int x, int y) {
   if (space == SP_SOFTBLOCK) {
     this->softBlockBoard[i] = 0;
     this->deletePortal(x, y, NODIR); // NODIR means delete all portals
-
-
-    // std::cout << "bv: " << getBlockValue(x, y) << std::endl;
 
     // Give coins to p1
     if (this->trailMap[i]->p1Exist) {

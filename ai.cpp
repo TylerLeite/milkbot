@@ -12,21 +12,20 @@ float randFloat(int mx) {
   return mx * r;
 }
 
-timespec diff(timespec start, timespec end) {
+timespec timeElapsed(timespec start, timespec end) {
   timespec temp;
-  if ((end.tv_nsec-start.tv_nsec)<0) {
+  if ((end.tv_nsec-start.tv_nsec) < 0) {
     temp.tv_sec = end.tv_sec-start.tv_sec-1;
     temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
   } else {
     temp.tv_sec = end.tv_sec-start.tv_sec;
     temp.tv_nsec = end.tv_nsec-start.tv_nsec;
   }
-
   return temp;
 }
 
-int tsMs(timespec convert) {
-  int mill = convert.tv_nsec/100000;
+long tsMs(const timespec convert) {
+  int mill = (int)(convert.tv_sec*1000 + convert.tv_nsec/1000000L);
   return mill;
 }
 
@@ -713,17 +712,10 @@ int AI::minimax(Game* node, int depth, int alpha, int beta) {
   }
 
   timespec now;
-  clock_gettime(CLOCK_REALTIME, &now);
-  double msTaken = tsMs(diff(now, this->start));
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  double msTaken = tsMs(timeElapsed(this->start, now));
   if (msTaken > TIMEOUT) {
     // panic, running out of time
-
-    /*
-    if (this->verbose) {
-     std::cout << "PANIC!!!" << std::endl;
-    }
-    //*/
-
     if (maximizingPlayer) {
       return 1000000;
     } else {
@@ -785,7 +777,7 @@ void AI::doMinimax(int* out, Game* node, int depth) {
 
 std::string AI::chooseMove() {
   //this->start = std::clock();
-  clock_gettime(CLOCK_REALTIME, &(this->start));
+  clock_gettime(CLOCK_MONOTONIC, &(this->start));
 
   std::vector<Game*> children = this->realGame->getChildren();
 
@@ -826,7 +818,7 @@ std::string AI::chooseMove() {
   }
 
   for (size_t i = 0; i < scores.size(); i++) {
-    int* score = scores[i];
+    int *score = scores[i];
     if (children[i]->lastMove == "b" && *score != -infinity && *score != 0) {
       if (this->realGame->moveNumber <= 120) {
         *score = 1000000;
@@ -893,11 +885,11 @@ std::string AI::chooseMove() {
   // how long did choosing this move take?
   if (this->verbose) {
     timespec now;
-    clock_gettime(CLOCK_REALTIME, &now);
-    double msTaken = tsMs(diff(now, this->start));
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    double msTaken = tsMs(timeElapsed(this->start, now));
     std::cout << "Time: " << msTaken << " ms" << std::endl;
 
-    if (msTaken >= TIMEOUT + 250) {
+    if (msTaken >=  16000) {
       std::cout << "TIMEOUT NOOOOO" << std::endl;
       *(int*)0=0; // cause a segfault, my favorite way to exit a progam
     }
