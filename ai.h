@@ -77,7 +77,9 @@ class Creature {
 #define USERNAME "milk"
 #define URL "http://aicomp.io/api/games/submit/"
 
-#define SEARCH_DEPTH 11
+
+#define TIMEOUT 14250 // milliseconds until termination of minimax
+#define SEARCH_DEPTH 11 // minimax depth
 #define MLCT 13 // number of weights
 #define MAX_WEIGHT 30 // maximum weight for a variable
 #define POP_SIZE 100 // population size for each generation

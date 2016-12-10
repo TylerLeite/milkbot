@@ -712,13 +712,12 @@ int AI::minimax(Game* node, int depth, int alpha, int beta) {
     return this->heuristic(node);
   }
 
-  //double msTaken = std::clock() - this->start) / (double)(CLOCKS_PER_SEC / 1000);
   timespec now;
-  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
+  clock_gettime(CLOCK_REALTIME, &now);
   double msTaken = tsMs(diff(now, this->start));
-  if (msTaken > 14250) {
+  if (msTaken > TIMEOUT) {
     // panic, running out of time
-    
+
     /*
     if (this->verbose) {
      std::cout << "PANIC!!!" << std::endl;
@@ -787,7 +786,7 @@ void AI::doMinimax(int* out, Game* node, int depth) {
 std::string AI::chooseMove() {
   //this->start = std::clock();
   clock_gettime(CLOCK_REALTIME, &(this->start));
-  
+
   std::vector<Game*> children = this->realGame->getChildren();
 
   int infinity = std::numeric_limits<int>::max(); // need this for later (now)
@@ -811,16 +810,11 @@ std::string AI::chooseMove() {
     }
   }
 
-  // Search breadth too large, cut down depth
-  if (children.size() >= 6) {
-    depth -= 2;
-  }
-
   // Each move's analysis does get its own thread
   //std::vector<int> scores;
   std::vector<int*> scores;
   std::vector<std::thread> threads;
-  for (size_t i = 0; i < children.size(); i++) {    
+  for (size_t i = 0; i < children.size(); i++) {
     //int score = this->minimax(children[i], depth, -infinity, infinity);
     int* score = new int(-infinity);
     scores.push_back(score);
@@ -898,13 +892,12 @@ std::string AI::chooseMove() {
 
   // how long did choosing this move take?
   if (this->verbose) {
-    //double msTaken = (std::clock() - this->start) / (double)(CLOCKS_PER_SEC / 1000);
     timespec now;
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
-    double msTaken = tsMs(diff(now, this->start)); 
+    clock_gettime(CLOCK_REALTIME, &now);
+    double msTaken = tsMs(diff(now, this->start));
     std::cout << "Time: " << msTaken << " ms" << std::endl;
 
-    if (msTaken >= 14500) {
+    if (msTaken >= TIMEOUT + 250) {
       std::cout << "TIMEOUT NOOOOO" << std::endl;
       *(int*)0=0; // cause a segfault, my favorite way to exit a progam
     }
