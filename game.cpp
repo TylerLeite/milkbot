@@ -165,11 +165,11 @@ void Player::kill() {
 
 std::vector<std::string> makeAllMoves() {
   std::vector<std::string> allMoves;
+  allMoves.push_back("b");
   allMoves.push_back("mu");
   allMoves.push_back("mr");
   allMoves.push_back("ml");
   allMoves.push_back("md"); 
-  allMoves.push_back("b");
   allMoves.push_back("op");
   allMoves.push_back("bp");
   //allMoves.push_back("buy_block");

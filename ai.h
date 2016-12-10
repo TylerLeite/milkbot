@@ -47,6 +47,7 @@ Value formula (min 1, even if the formula returns 0):
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/select.h>
+#include <sys/time.h>
 #include <thread>
 #include <time.h>
 #include <unistd.h>
@@ -76,7 +77,7 @@ class Creature {
 #define USERNAME "milk"
 #define URL "http://aicomp.io/api/games/submit/"
 
-#define SEARCH_DEPTH 17
+#define SEARCH_DEPTH 11
 #define MLCT 13 // number of weights
 #define MAX_WEIGHT 30 // maximum weight for a variable
 #define POP_SIZE 100 // population size for each generation
@@ -128,7 +129,7 @@ class AI {
     Game* realGame;
 
     bool verbose;
-    std::clock_t start;
+    timespec start;
     // Why not throw in some ML?
     bool learning;
     Creature *p1Creature, *p2Creature, *currentCreature;

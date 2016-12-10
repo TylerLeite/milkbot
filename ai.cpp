@@ -12,6 +12,24 @@ float randFloat(int mx) {
   return mx * r;
 }
 
+timespec diff(timespec start, timespec end) {
+  timespec temp;
+  if ((end.tv_nsec-start.tv_nsec)<0) {
+    temp.tv_sec = end.tv_sec-start.tv_sec-1;
+    temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
+  } else {
+    temp.tv_sec = end.tv_sec-start.tv_sec;
+    temp.tv_nsec = end.tv_nsec-start.tv_nsec;
+  }
+
+  return temp;
+}
+
+int tsMs(timespec convert) {
+  int mill = convert.tv_nsec/100000;
+  return mill;
+}
+
 ////////////////////////////
 // Creature definitions
 ////////////////////////////
@@ -694,12 +712,18 @@ int AI::minimax(Game* node, int depth, int alpha, int beta) {
     return this->heuristic(node);
   }
 
-  double msTaken = (std::clock() - this->start) / (double)(CLOCKS_PER_SEC / 1000);
-  if (msTaken > 13500) {
+  //double msTaken = std::clock() - this->start) / (double)(CLOCKS_PER_SEC / 1000);
+  timespec now;
+  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
+  double msTaken = tsMs(diff(now, this->start));
+  if (msTaken > 14250) {
     // panic, running out of time
+    
+    /*
     if (this->verbose) {
      std::cout << "PANIC!!!" << std::endl;
     }
+    //*/
 
     if (maximizingPlayer) {
       return 1000000;
@@ -731,7 +755,7 @@ int AI::minimax(Game* node, int depth, int alpha, int beta) {
     }
 
     //*
-    if (beta <= alpha && node->currentTurn == 0) {
+    if (beta <= alpha && node->currentTurn == 1) {
       break;
     }
     //*/
@@ -761,7 +785,9 @@ void AI::doMinimax(int* out, Game* node, int depth) {
 }
 
 std::string AI::chooseMove() {
-  this->start = std::clock();
+  //this->start = std::clock();
+  clock_gettime(CLOCK_REALTIME, &(this->start));
+  
   std::vector<Game*> children = this->realGame->getChildren();
 
   int infinity = std::numeric_limits<int>::max(); // need this for later (now)
@@ -790,40 +816,40 @@ std::string AI::chooseMove() {
     depth -= 2;
   }
 
-  // Each move's analysis doesn't get its own thread
-  std::vector<int> scores;
+  // Each move's analysis does get its own thread
+  //std::vector<int> scores;
+  std::vector<int*> scores;
+  std::vector<std::thread> threads;
+  for (size_t i = 0; i < children.size(); i++) {    
+    //int score = this->minimax(children[i], depth, -infinity, infinity);
+    int* score = new int(-infinity);
+    scores.push_back(score);
+    threads.push_back(std::thread(&AI::doMinimax, this, score, children[i], depth));
+  }
+
   for (size_t i = 0; i < children.size(); i++) {
-    if (this->verbose) {
-      std::cout << "Trying move: " << children[i]->lastMove << std::endl; 
-    }
-    int score = this->minimax(children[i], depth, -infinity, infinity);
-    if (children[i]->lastMove == "b" && score != -infinity && score != 0) {
+    threads[i].join();
+  }
+
+  for (size_t i = 0; i < scores.size(); i++) {
+    int* score = scores[i];
+    if (children[i]->lastMove == "b" && *score != -infinity && *score != 0) {
       if (this->realGame->moveNumber <= 120) {
-        score = 1000000;
+        *score = 1000000;
       } else if (this->realGame->moveNumber <= 200) {
         if (rand() % 3 == 0) {
-          score = 1000000;
+          *score = 1000000;
         }
       } else {
         if (rand() % 2 == 0) {
-          score = 1000000;
+          *score = 1000000;
         }
       }
-    }
-
-    scores.push_back(score);
-    
-    double msTaken = (std::clock() - this->start) / (double)(CLOCKS_PER_SEC / 1000);
-    //std::cout << "Time: " << msTaken << " ms" << std::endl;
-    int nextI = i+1;
-    if (msTaken >= std::min(12000, 14000*(1 - 1/(nextI+1)))) {
-      std::cout << "Cutting the anal(ysis) short" << std::endl;
-      break;
     }
   }
 
   for (size_t i = 0; i < scores.size(); i++) {
-    int score = scores[i];
+    int score = *(scores[i]);
     if (score == max_score) {
       goodMoves.push_back(children[i]->lastMove);
     }
@@ -867,14 +893,18 @@ std::string AI::chooseMove() {
 
   for (size_t i = 0; i < children.size(); i++) {
     delete children[i];
+    delete scores[i];
   }
 
   // how long did choosing this move take?
   if (this->verbose) {
-    double msTaken = (std::clock() - this->start) / (double)(CLOCKS_PER_SEC / 1000);
+    //double msTaken = (std::clock() - this->start) / (double)(CLOCKS_PER_SEC / 1000);
+    timespec now;
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
+    double msTaken = tsMs(diff(now, this->start)); 
     std::cout << "Time: " << msTaken << " ms" << std::endl;
 
-    if (msTaken >= 14000) {
+    if (msTaken >= 14500) {
       std::cout << "TIMEOUT NOOOOO" << std::endl;
       *(int*)0=0; // cause a segfault, my favorite way to exit a progam
     }
