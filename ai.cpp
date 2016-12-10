@@ -491,14 +491,16 @@ void AI::initGame(char* arg, bool continuous) {
     17.0621, 6.24294,
     20.5329, 14.1068,
   */
-  this->A = 10.0055; // position
+  //this->A = 10.0055; // position
+  this->A = 50.0055; // position
   this->B = 28.9702; // coins
   this->C = 3.37105; // bomb score
   this->D = 0.15425; // portal score
-  this->E = 20.3831; // want to spend money
+  this->E = 100.3831; // want to spend money
 
   this->G = 29.2975; // bomb tick multiplier
-  this->H = 11.6823; // max position score
+  //this->H = 11.6823; // max position score
+  this->H = 18.6823; // max position score
   this->I = 9.64621; // max bomb tick score
   this->J = 12.9612; // bombs-out score multiplier
 
@@ -889,7 +891,7 @@ std::string AI::chooseMove() {
     double msTaken = tsMs(timeElapsed(this->start, now));
     std::cout << "Time: " << msTaken << " ms" << std::endl;
 
-    if (msTaken >=  16000) {
+    if (msTaken >=  30000) {
       std::cout << "TIMEOUT NOOOOO" << std::endl;
       *(int*)0=0; // cause a segfault, my favorite way to exit a progam
     }

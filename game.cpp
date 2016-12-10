@@ -1153,10 +1153,6 @@ std::vector<std::string> Game::filterPointlessMoves() {
         continue;
       }
     } else if (clm == "buy_range" || clm == "buy_pierce" || clm == "buy_count") {
-      if (this->bombMap.empty()) {
-        continue;
-      }
-
       if (me->coins < 5 || this->moveNumber > 400) {
         continue;
       }
