@@ -713,6 +713,8 @@ int AI::minimax(Game* node, int depth, int alpha, int beta) {
     return this->heuristic(node);
   }
 
+  // Check how much time has passed sine the start of minimax
+  // note that montecarlo might be better in general for cutting search short
   timespec now;
   clock_gettime(CLOCK_MONOTONIC, &now);
   double msTaken = tsMs(timeElapsed(this->start, now));
@@ -725,6 +727,7 @@ int AI::minimax(Game* node, int depth, int alpha, int beta) {
     }
   }
 
+  // Sort games to promote early cutoffs (search bomb moves first)
   std::vector<Game*> children = node->getChildren();
   qsortGames(children, 0, children.size()-1);
 
@@ -734,6 +737,7 @@ int AI::minimax(Game* node, int depth, int alpha, int beta) {
     bestValue = infinity;
   }
 
+  // basic minimax algorithm
   for (size_t i = 0; i < children.size(); i++) {
     if (maximizingPlayer) {
       int mmscore = this->minimax(children[i], depth-1, alpha, beta);
@@ -747,21 +751,15 @@ int AI::minimax(Game* node, int depth, int alpha, int beta) {
       beta = std::min(beta, bestValue);
     }
 
-    //*
+    /* Since minimax wasnt really made for a game like this with alternating
+       move order, alphabeta will cause cutoffs overzealously. The idea behind
+       alphabeta is that you can trash a move that gives your opponent too good
+       of a countermove. Therefore, only check for cutoffs when the turn is about
+       to change
+     */
     if (beta <= alpha && node->currentTurn == 1) {
       break;
     }
-    //*/
-
-    /*
-    if (beta <= alpha){
-      if (this->realGame->currentPlayer->playerNum == PLAYER1 && node->currentTurn == 0) {
-        break; // CUTOFF
-      } else if (this->realGame->currentPlayer->playerNum == PLAYER2 && node->currentTurn == 1) {
-        break;
-      }
-    }
-    //*/
   }
 
   for (size_t i = 0; i < children.size(); i++) {
@@ -772,18 +770,18 @@ int AI::minimax(Game* node, int depth, int alpha, int beta) {
 }
 
 void AI::doMinimax(int* out, Game* node, int depth) {
-  // For multithreading (not currently used)
+  // For multithreading (currently used)
   int infinity = std::numeric_limits<int>::max();
   *out = this->minimax(node, depth, -infinity, infinity);
 }
 
 std::string AI::chooseMove() {
-  //this->start = std::clock();
+  // find start time to reference against when checking if minimax should terminate early
   clock_gettime(CLOCK_MONOTONIC, &(this->start));
 
   std::vector<Game*> children = this->realGame->getChildren();
 
-  int infinity = std::numeric_limits<int>::max(); // need this for later (now)
+  int infinity = std::numeric_limits<int>::max();
   int max_score = -infinity;
   std::vector<std::string> goodMoves;
 
@@ -891,7 +889,7 @@ std::string AI::chooseMove() {
     double msTaken = tsMs(timeElapsed(this->start, now));
     std::cout << "Time: " << msTaken << " ms" << std::endl;
 
-    if (msTaken >=  30000) {
+    if (msTaken >=  TIMEOUT_ABSOLUTE) {
       std::cout << "TIMEOUT NOOOOO" << std::endl;
       *(int*)0=0; // cause a segfault, my favorite way to exit a progam
     }

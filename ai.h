@@ -78,9 +78,9 @@ class Creature {
 #define URL "http://aicomp.io/api/games/submit/"
 
 
-#define TIMEOUT_ABSOLUTE 16000
-#define TIMEOUT TIMEOUT_ABSOLUTE-11500 // milliseconds until termination of minimax
-#define SEARCH_DEPTH 11 // minimax depth
+#define TIMEOUT_ABSOLUTE 16000 // 15 second timeout for making a move, set to 16 for leeway before program termination
+#define TIMEOUT TIMEOUT_ABSOLUTE-1500 // milliseconds until termination of minimax
+#define SEARCH_DEPTH 11 // minimax depth (11 guarantees you wont kill yourself)
 #define MLCT 13 // number of weights
 #define MAX_WEIGHT 30 // maximum weight for a variable
 #define POP_SIZE 100 // population size for each generation

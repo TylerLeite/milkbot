@@ -365,9 +365,30 @@ Game::~Game() {
   this->portalMap.clear();
 }
 
+void Game::advanceApocalypseIterator() {
+  Coord nextSquare1 = this->getNextSquare(this->apocalypseIterator1.x, this->apocalypseIterator1.y, this->apocalypseIterator1.dir);
+  int i = (this->boardSize)*nextSquare1.x + nextSquare1.y;
+  if (nextSquare1.x < 0 || nextSquare1.x >= this->boardSize
+   || nextSquare1.y < 0 || nextSquare1.y >= this->boardSize
+   || ((this->trailMap.find(i) != this->trailMap.end()) && this->trailMap[i]->apocalypse))
+  {
+    // both sides always turn at the same time
+    this->apocalypseIterator1.dir = (this->apocalypseIterator1.dir + 1) % 4;
+    this->apocalypseIterator2.dir = (this->apocalypseIterator2.dir + 1) % 4;
+    nextSquare1 = getNextSquare(this->apocalypseIterator1.x, this->apocalypseIterator1.y, this->apocalypseIterator1.dir);
+  }
+
+  Coord nextSquare2 = getNextSquare(this->apocalypseIterator2.x, this->apocalypseIterator2.y, this->apocalypseIterator2.dir);
+  this->apocalypseIterator1.x = nextSquare1.x;
+  this->apocalypseIterator1.y = nextSquare1.y;
+  this->apocalypseIterator2.x = nextSquare2.x;
+  this->apocalypseIterator2.y = nextSquare2.y;
+}
+
 void Game::loadFromJSON(const json& j) {
   delete this->player1;
   this->player1 = nullptr;
+
   delete this->player2;
   this->player2 = nullptr;
 
@@ -375,6 +396,11 @@ void Game::loadFromJSON(const json& j) {
   this->currentTurn = j["moveIterator"];
   this->boardSize = j["boardSize"];
   this->moveNumber = j["moveNumber"];
+
+  // Advance the apocalypse iterators
+  for (int i = 400; i < this->moveNumber; i++) {
+    this->advanceApocalypseIterator();
+  }
 
   int first = j["moveOrder"].at(0);
   this->p1First = (first == 0); // Look how smart I am
@@ -1045,23 +1071,7 @@ std::string Game::submit(Player* currentPlayer, const std::string& move) {
       this->placeTrail(nullptr, this->apocalypseIterator1.x, this->apocalypseIterator1.y, APOCALYPSE);
       this->placeTrail(nullptr, this->apocalypseIterator2.x, this->apocalypseIterator2.y, APOCALYPSE);
 
-      Coord nextSquare1 = this->getNextSquare(this->apocalypseIterator1.x, this->apocalypseIterator1.y, this->apocalypseIterator1.dir);
-      int i = (this->boardSize)*nextSquare1.x + nextSquare1.y;
-      if (nextSquare1.x < 0 || nextSquare1.x >= this->boardSize
-       || nextSquare1.y < 0 || nextSquare1.y >= this->boardSize
-       || ((this->trailMap.find(i) != this->trailMap.end()) && this->trailMap[i]->apocalypse))
-      {
-        // both sides always turn at the same time
-        this->apocalypseIterator1.dir = (this->apocalypseIterator1.dir + 1) % 4;
-        this->apocalypseIterator2.dir = (this->apocalypseIterator2.dir + 1) % 4;
-        nextSquare1 = getNextSquare(this->apocalypseIterator1.x, this->apocalypseIterator1.y, this->apocalypseIterator1.dir);
-      }
-
-      Coord nextSquare2 = getNextSquare(this->apocalypseIterator2.x, this->apocalypseIterator2.y, this->apocalypseIterator2.dir);
-      this->apocalypseIterator1.x = nextSquare1.x;
-      this->apocalypseIterator1.y = nextSquare1.y;
-      this->apocalypseIterator2.x = nextSquare2.x;
-      this->apocalypseIterator2.y = nextSquare2.y;
+      this->advanceApocalypseIterator();
     }
 
     std::vector<Coord> toDetonate;

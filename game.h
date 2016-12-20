@@ -128,6 +128,8 @@ class Game {
     Game(Game* other);
     virtual ~Game();
 
+    void advanceApocalypseIterator();
+
     void loadFromJSON(const json& j);
     std::string hash();
 
